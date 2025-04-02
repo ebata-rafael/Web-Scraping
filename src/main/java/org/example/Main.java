@@ -12,6 +12,8 @@ import org.jsoup.select.Elements;
 import java.io.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 
@@ -32,7 +34,7 @@ public class Main {
 
         int count = 1;
 
-        String zipFileName = "D:\\Dev\\Zipado.zip";
+        String zipFileName = "src\\main\\resources\\Zipado.zip";
 
         try (FileOutputStream destino = new FileOutputStream(zipFileName);
              ZipOutputStream saida = new ZipOutputStream(destino)) {
@@ -55,9 +57,19 @@ public class Main {
 //    Parte 1
 //    ====================================================================================================================
 
+        String zipFilePath = "src\\main\\resources\\Zipado.zip";
+        String destDir = "src\\main\\resources";
 
-        String inputPDF = "D:\\Dev\\Zipado\\anexo1.pdf";
-        String outputCSV = "D:\\Dev\\Zipado\\resultado.csv";
+        try {
+            unzip(zipFilePath, destDir);
+            System.out.println("Arquivo descompactado com sucesso!");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+        String inputPDF = "src\\main\\resources\\anexo1.pdf";
+        String outputCSV = "src\\main\\resources\\resultado.csv";
 
         try (PDDocument document = PDDocument.load(new java.io.File(inputPDF));
              BufferedWriter writer = new BufferedWriter(new FileWriter(outputCSV))) {
@@ -82,12 +94,10 @@ public class Main {
             String descricao1 = "";
             if (matcher.find()) {
                 descricao1 = matcher.group(2);
-                System.out.println("Primeira: descricao: " + descricao1);
             }
             String descricao2 = "";
             if (matcher.find()) {
                 descricao2 = matcher.group(2);
-                System.out.println("Segunda: descricao: " + descricao2);
             }
 
             stripper.setStartPage(3);
@@ -122,12 +132,12 @@ public class Main {
                 writer.newLine();
             }
 
-            zipFileName = "D:\\Dev\\Teste_{rafael_ebata}.zip";
+            zipFileName = "src\\main\\resources\\Teste_{rafael_ebata}.zip";
 
             try (FileOutputStream destino = new FileOutputStream(zipFileName);
                  ZipOutputStream saida = new ZipOutputStream(destino)) {
 
-                FileInputStream arquivoDeEntrada = new FileInputStream ("D:\\Dev\\Zipado\\resultado.csv");
+                FileInputStream arquivoDeEntrada = new FileInputStream ("src\\main\\resources\\resultado.csv");
                  Compactador.addFileInZip(saida, arquivoDeEntrada, "resultado.csv");
                  System.out.println("PDF compactado com sucesso no arquivo ZIP: " + zipFileName);
 
@@ -141,4 +151,34 @@ public class Main {
             System.err.println("Erro ao baixar ou compactar o PDF: " + e.getMessage());
         }
     }
+
+
+    public static void unzip(String zipFilePath, String destDir) throws IOException {
+        File dir = new File(destDir);
+        if (!dir.exists()) dir.mkdirs();
+        try (ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFilePath))) {
+            ZipEntry entry = zipIn.getNextEntry();
+            while (entry != null) {
+                String filePath = destDir + File.separator + entry.getName();
+                if (!entry.isDirectory()) {
+                    extractFile(zipIn, filePath);
+                } else {
+                    new File(filePath).mkdirs();
+                }
+                zipIn.closeEntry();
+                entry = zipIn.getNextEntry();
+            }
+        }
+    }
+
+    private static void extractFile(ZipInputStream zipIn, String filePath) throws IOException {
+        try (FileOutputStream fos = new FileOutputStream(filePath)) {
+            byte[] bytes = new byte[4096];
+            int length;
+            while ((length = zipIn.read(bytes)) > 0) {
+                fos.write(bytes, 0, length);
+            }
+        }
+    }
+
 }
